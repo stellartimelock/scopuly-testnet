@@ -1,28 +1,42 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>StellarTimeLock × Scopuly — Testnet SEP-7 ping generator</title>
+<title>StellarTimeLock × Scopuly — Testnet SEP-7 generator</title>
 <style>body{font-family:system-ui,sans-serif;background:#05080c;color:#d8f6ff;max-width:820px;margin:auto;padding:20px}
 .warn{border:2px solid #ffb300;background:#2a1f00;color:#ffd666;padding:12px;border-radius:8px;font-weight:600}
-button{background:#00d8ff;color:#001;border:0;border-radius:6px;padding:10px 16px;font-weight:700;cursor:pointer}
-button.s{padding:4px 10px;font-size:12px}textarea{width:100%;height:110px;background:#0b1520;color:#bfefff;border:1px solid #1d3a4a;font-family:monospace;font-size:12px}
-#qr{background:#fff;display:inline-block;padding:10px;border-radius:6px}#err{color:#ff6b6b}small{color:#7aa}</style></head><body>
-<h1>Testnet SEP-7 ping request generator</h1>
-<div class="warn">TESTNET ONLY — simulated, no real funds. Network: “Test SDF Network ; September 2015”. Unsigned request; this page holds no keys and signs nothing.</div>
-<p>Builds a fresh, unsigned <code>ping(owner, 22)</code> call on the StellarTimeLock dead-man's-switch contract for <b>vault 22</b>, with a fresh sequence number (Horizon testnet), fresh 30-min timebounds and a fresh Soroban simulation (soroban-testnet RPC). Same shape as the sample sent on Oct 10.</p>
-<small>Contract <code id="c"></code><br>Source/owner <code id="s"></code></small>
-<p><button id="go">Generate fresh request</button> <span id="st"></span></p><p id="err"></p>
-<div id="out" hidden>
-<h3>SEP-7 URI <button class="s" data-c="uri">Copy</button></h3><textarea id="uri" readonly></textarea>
-<h3>QR code</h3><div id="qr"></div>
-<h3>Transaction XDR (unsigned, base64) <button class="s" data-c="xdr">Copy</button></h3><textarea id="xdr" readonly></textarea>
-<small id="meta"></small></div>
+.step{border:1px solid #1d3a4a;border-radius:8px;padding:12px;margin:14px 0}h2{margin:0 0 8px;color:#00d8ff}
+button{background:#00d8ff;color:#001;border:0;border-radius:6px;padding:10px 16px;font-weight:700;cursor:pointer}button:disabled{opacity:.5}
+button.s{padding:4px 10px;font-size:12px}input{background:#0b1520;color:#bfefff;border:1px solid #1d3a4a;padding:6px;font-family:monospace;width:100%;box-sizing:border-box}
+textarea{width:100%;height:100px;background:#0b1520;color:#bfefff;border:1px solid #1d3a4a;font-family:monospace;font-size:12px}
+.qr{background:#fff;display:inline-block;padding:10px;border-radius:6px}.err{color:#ff6b6b}small{color:#7aa}</style></head><body>
+<h1>Testnet SEP-7 request generator</h1>
+<div class="warn">TESTNET ONLY — simulated, no real funds. Network: “Test SDF Network ; September 2015”. Requests are unsigned; this page holds no keys and signs nothing.</div>
+<div class="step"><h2>Step 1 — Your Testnet account</h2>
+<label>Account (source &amp; vault owner, G…)<input id="acct"></label>
+<p><button id="chk" class="s">Check account &amp; vaults</button> <span id="info"></span></p>
+<small>Contract <code id="c"></code>. URL params: <code>?account=G…&amp;vault=N</code>. Default is the original sample (vault 22).</small></div>
+<div class="step"><h2>Step 2 — Create test vault (only if you don't own one)</h2>
+<p><small>Builds <code>create_dead_man_switch_vault</code>: 0.0000001 testnet XLM (1 stroop), 1-hour check-in window. Approve it in your wallet, then come back for Step 3.</small></p>
+<button id="mk">Create test vault</button><div id="o1"></div></div>
+<div class="step"><h2>Step 3 — Ping (check in) on your vault</h2>
+<label>Vault id<input id="vault"></label>
+<p><button id="go">Generate fresh request</button></p><div id="o2"></div></div>
 <script src="vendor/stellar-sdk.min.js"></script><script src="vendor/qrcode.js"></script><script src="build.js"></script>
 <script>
-const $=id=>document.getElementById(id);$('c').textContent=STL.CFG.contract;$('s').textContent=STL.CFG.source;
-$('go').onclick=async()=>{$('err').textContent='';$('st').textContent='Building…';$('go').disabled=true;
- try{const r=await STL.buildPing(StellarSdk);$('uri').value=r.uri;$('xdr').value=r.xdr;
-  const q=qrcode(0,'L');q.addData(r.uri);q.make();$('qr').innerHTML=q.createSvgTag({cellSize:3,margin:2});
-  const tb=r.tx.timeBounds;$('meta').textContent=`seq ${r.tx.sequence} · fee ${r.tx.fee} stroops (testnet XLM) · valid until ${new Date(tb.maxTime*1000).toLocaleString()} · generated ${new Date().toLocaleString()}`;
-  $('out').hidden=false;$('st').textContent='Done';}
- catch(e){$('err').textContent='Error: '+(e.message||e);$('st').textContent='';}finally{$('go').disabled=false;}};
-document.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{navigator.clipboard.writeText($(b.dataset.c).value);b.textContent='Copied';setTimeout(()=>b.textContent='Copy',1200)});
+const $=id=>document.getElementById(id),P=new URLSearchParams(location.search);
+$('c').textContent=STL.CFG.contract;$('acct').value=P.get('account')||STL.CFG.source;$('vault').value=P.get('vault')||(P.get('account')?'':STL.CFG.vaultId);
+const acct=()=>$('acct').value.trim();
+function show(el,r,extra){const q=qrcode(0,'L');q.addData(r.uri);q.make();const id=el.id;
+ el.innerHTML=`<p>${extra||''}</p><h3>SEP-7 URI <button class="s" data-c="${id}u">Copy</button></h3><textarea id="${id}u" readonly></textarea>
+ <h3>QR code</h3><div class="qr">${q.createSvgTag({cellSize:3,margin:2})}</div>
+ <h3>Transaction XDR (unsigned) <button class="s" data-c="${id}x">Copy</button></h3><textarea id="${id}x" readonly></textarea>
+ <small>seq ${r.tx.sequence} · fee ${r.tx.fee} stroops (testnet XLM) · valid until ${new Date(r.tx.timeBounds.maxTime*1000).toLocaleString()}</small>`;
+ $(id+'u').value=r.uri;$(id+'x').value=r.xdr;
+ el.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{navigator.clipboard.writeText($(b.dataset.c).value);b.textContent='Copied';setTimeout(()=>b.textContent='Copy',1200)});}
+async function run(btn,el,fn){btn.disabled=true;el.innerHTML='Building…';try{await fn()}catch(e){el.innerHTML='<p class="err">Error: '+(e.message||e)+'</p>'}finally{btn.disabled=false}}
+async function check(){$('info').textContent='Checking…';try{const v=await STL.listOwned(StellarSdk,acct());
+ $('info').textContent=v.length?'Owns vault(s): '+v.join(', '):'No vaults yet — do Step 2 first.';if(v.length&&!$('vault').value)$('vault').value=v[v.length-1];}
+ catch(e){$('info').textContent=/Not Found|404/.test(e.message)?'Account not found on Testnet (unfunded).':'Error: '+e.message}}
+$('chk').onclick=check;if(P.get('account'))check();
+$('mk').onclick=()=>run($('mk'),$('o1'),async()=>{const r=await STL.buildCreate(StellarSdk,acct());show($('o1'),r,`Expected vault id: <b>${r.expectedVaultId}</b> (may shift if someone else creates one first — use “Check account” after approving).`);});
+$('go').onclick=()=>run($('go'),$('o2'),async()=>{if(!$('vault').value)throw new Error('Enter a vault id (Step 1 “Check account” fills it once you own one).');
+ const r=await STL.buildPing(StellarSdk,acct(),$('vault').value);show($('o2'),r,'Ping for vault '+r.vaultId);});
 </script></body></html>
