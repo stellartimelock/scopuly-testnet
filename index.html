@@ -19,7 +19,7 @@ textarea{width:100%;height:100px;background:#0b1520;color:#bfefff;border:1px sol
 <div class="step"><h2>Step 3 — Ping (check in) on your vault</h2>
 <label>Vault id<input id="vault"></label>
 <p><button id="go">Generate fresh request</button></p><div id="o2"></div></div>
-<script src="vendor/stellar-sdk.min.js"></script><script src="vendor/qrcode.js"></script><script src="build.js?v=2"></script>
+<script src="vendor/stellar-sdk.min.js"></script><script src="vendor/qrcode.js"></script><script src="build.js?v=3"></script>
 <script>
 const $=id=>document.getElementById(id),P=new URLSearchParams(location.search);
 $('c').textContent=STL.CFG.contract;$('acct').value=P.get('account')||STL.CFG.source;$('vault').value=P.get('vault')||(P.get('account')?'':STL.CFG.vaultId);
@@ -39,4 +39,4 @@ $('chk').onclick=check;if(P.get('account'))check();
 $('mk').onclick=()=>run($('mk'),$('o1'),async()=>{const r=await STL.buildCreate(StellarSdk,acct());show($('o1'),r,`Expected vault id: <b>${r.expectedVaultId}</b> (may shift if someone else creates one first — use “Check account” after approving).`);});
 $('go').onclick=()=>run($('go'),$('o2'),async()=>{if(!$('vault').value)throw new Error('Enter a vault id (Step 1 “Check account” fills it once you own one).');
  const r=await STL.buildPing(StellarSdk,acct(),$('vault').value);show($('o2'),r,'Ping for vault '+r.vaultId);});
-</script></body></html>
+</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" crossorigin="anonymous" data-cf-beacon='{"token":"6adff42a8edf4c448d2fe3847d949074"}'></script></body></html>
